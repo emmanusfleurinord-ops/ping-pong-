@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pong Game - Auto vs Auto</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            background: linear-gradient(135deg, #0a0a1f, #1a0a2e);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            overflow: hidden;
+            font-family: 'Segoe UI', Arial, sans-serif;
+            color: white;
+        }
+
+        h1 {
+            margin-bottom: 12px;
+            font-size: 26px;
+            color: #00f0ff;
+            text-shadow: 0 0 12px #00f0ff;
+        }
+
+        .controls {
+            margin-bottom: 15px;
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        button {
+            padding: 10px 18px;
+            font-size: 15px;
+            cursor: pointer;
+            background: #1a1a3a;
+            color: white;
+            border: 2px solid #00f0ff;
+            border-radius: 8px;
+            transition: 0.2s;
+            font-weight: 600;
+        }
+
+        button:hover {
+            background: #00f0ff;
+            color: #000;
+            transform: scale(1.05);
+        }
+
+        button.active {
+            background: #00f0ff;
+            color: #000;
+            box-shadow: 0 0 15px #00f0ff;
+        }
+
+        #btn-pause { border-color: #ff4d6d; color: #ff4d6d; }
+        #btn-pause:hover, #btn-pause.paused {
+            background: #ff4d6d; color: white; box-shadow: 0 0 15px #ff4d6d;
+        }
+
+        #btn-settings { border-color: #ffeb3b; color: #ffeb3b; }
+        #btn-settings:hover { background: #ffeb3b; color: #000; }
+
+        canvas {
+            border: 4px solid #00f0ff;
+            border-radius: 8px;
+            background-color: #050510;
+            box-shadow: 0 0 30px rgba(0, 240, 255, 0.3);
+        }
+
+        /* Painel de Configurações */
+        .settings-panel {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: #12122a;
+            border: 3px solid #00f0ff;
+            border-radius: 16px;
+            padding: 30px 40px;
+            z-index: 100;
+            box-shadow: 0 0 40px rgba(0, 240, 255, 0.4);
+            min-width: 340px;
+        }
+
+        .settings-panel h2 {
+            color: #00f0ff;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .setting-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 18px;
+            font-size: 16px;
+        }
+
+        .setting-row label { color: #ddd; }
+
+        input[type="range"] {
+            width: 140px;
+            accent-color: #00f0ff;
+        }
+
+        .close-settings {
+            width: 100%;
+            margin-top: 15px;
+            border-color: #ff4d6d;
+            color: #ff4d6d;
+        }
+
+        .close-settings:hover {
+            background: #ff4d6d;
+            color: white;
+        }
+
+        .overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.65);
+            z-index: 99;
+        }
+
+        /* Tela de Vitória */
+        .winner-screen {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: #12122a;
+            border: 4px solid #00f0ff;
+            border-radius: 20px;
+            padding: 40px 50px;
+            z-index: 110;
+            text-align: center;
+            box-shadow: 0 0 50px rgba(0, 240, 255, 0.5);
+        }
+
+        .winner-screen h2 {
+            font-size: 36px;
+            margin-bottom: 20px;
+        }
+
+        .winner-screen p {
+            font-size: 18px;
+            margin-bottom: 25px;
+            color: #aaa;
+        }
+
+        #btn-restart {
+            padding: 12px 30px;
+            font-size: 18px;
+            border-color: #00ff9d;
+            color: #00ff9d;
+        }
+
+        #btn-restart:hover {
+            background: #00ff9d;
+            color: #000;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>🏓 Pong Auto vs Auto</h1>
+
+    <div class="controls">
+        <span>Dificuldade:</span>
+        <button id="btn-easy">Fácil</button>
+        <button id="btn-medium" class="active">Médio</button>
+        <button id="btn-hard">Difícil</button>
+
+        <button id="btn-pause">⏸ Pausar</button>
+        <button id="btn-settings">⚙ Configurações</button>
+    </div>
+
+    <canvas id="pong"></canvas>
+
+    <div class="overlay" id="overlay"></div>
+
+    <!-- Configurações -->
+    <div class="settings-panel" id="settingsPanel">
+        <h2>⚙ Configurações</h2>
+
+        <div class="setting-row">
+            <label>Som</label>
+            <button id="btn-sound-toggle" style="padding: 6px 14px; font-size: 14px;">Ligado</button>
+        </div>
+
+        <div class="setting-row">
+            <label>Volume</label>
+            <input type="range" id="volumeSlider" min="0" max="1" step="0.05" value="0.4">
+        </div>
+
+        <div class="setting-row">
+            <label>Velocidade da Bola</label>
+            <select id="ballSpeedSelect" style="padding: 6px 10px; border-radius: 6px; background: #1a1a3a; color: white; border: 2px solid #00f0ff;">
+                <option value="slow">Lenta</option>
+                <option value="normal" selected>Normal</option>
+                <option value="fast">Rápida</option>
+            </select>
+        </div>
+
+        <button class="close-settings" id="btn-close-settings">Fechar</button>
+    </div>
+
+    <!-- Tela de Vitória -->
+    <div class="winner-screen" id="winnerScreen">
+        <h2 id="winnerText">Verde Venceu!</h2>
+        <p>Primeiro a chegar a 5 pontos</p>
+        <button id="btn-restart">Jogar Novamente</button>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
